@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Chaturbate Multi-Stream Tracker",
+  "version": "1.0",
+  "description": "Track multiple Chaturbate streams in a real-time grid at the top of the page.",
+  "permissions": [
+    "storage"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://chaturbate.com/*"],
+      "js": ["content.js"],
+      "css": ["style.css"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["style.css"],
+      "matches": ["https://chaturbate.com/*"]
+    }
+  ]
+}

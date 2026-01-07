@@ -1,0 +1,305 @@
+/* Main container for the pinned streams */
+#cb-multi-stream-header {
+    width: 100%;
+    background: rgba(18, 18, 18, 0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 2px solid #ff4b2b;
+    padding: 15px;
+    box-sizing: border-box;
+    display: none;
+    /* Initially hidden */
+    flex-direction: column;
+    gap: 15px;
+    z-index: 9999;
+    position: relative;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+}
+
+#cb-multi-stream-header.active {
+    display: flex;
+}
+
+#cb-multi-stream-header.collapsed .cb-grid {
+    display: none;
+}
+
+.cb-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cb-header-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.cb-control-btn {
+    background: #333;
+    color: #fff;
+    border: 1px solid #444;
+    padding: 5px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+}
+
+.cb-control-btn:hover {
+    background: #444;
+    border-color: #ff4b2b;
+}
+
+.cb-control-btn.highlight {
+    background: linear-gradient(135deg, #28a745, #218838);
+    border-color: #1e7e34;
+    font-weight: bold;
+}
+
+.cb-control-btn.highlight:hover {
+    box-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
+    background: linear-gradient(135deg, #218838, #1e7e34);
+}
+
+#cb-multi-stream-header h2 {
+    color: #fff;
+    margin: 0;
+    font-size: 1.2rem;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cb-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 15px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+/* Individual stream card in the grid */
+.cb-stream-card {
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid #333;
+    transition: transform 0.2s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    aspect-ratio: 16 / 9;
+    background-image: linear-gradient(45deg, #111 25%, #000 25%, #000 50%, #111 50%, #111 75%, #000 75%, #000 100%);
+    background-size: 20px 20px;
+}
+
+.cb-stream-card.loading::after {
+    content: "Loading...";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #ff4b2b;
+    font-weight: bold;
+    animation: cb-pulse 1.5s infinite;
+}
+
+@keyframes cb-pulse {
+    0% {
+        opacity: 0.4;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0.4;
+    }
+}
+
+/* Drag and Drop Styles */
+.cb-stream-card.dragging {
+    opacity: 0.4;
+    transform: scale(0.95);
+    cursor: grabbing;
+}
+
+.cb-stream-card.drag-over {
+    border: 2px dashed #ff4b2b;
+    box-shadow: 0 0 20px rgba(255, 75, 43, 0.4);
+}
+
+/* Offline Styles */
+.cb-stream-card.is-offline {
+    display: none !important;
+}
+
+.cb-stream-card:hover {
+    transform: translateY(-2px);
+    border-color: #ff4b2b;
+}
+
+.cb-stream-card iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    overflow: hidden;
+    display: block;
+}
+
+.cb-card-header {
+    background: rgba(0, 0, 0, 0.6);
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+}
+
+.cb-card-title {
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cb-close-btn {
+    background: #ff4b2b;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    line-height: 1;
+}
+
+/* Button to add stream (in the original page) */
+.cb-track-btn {
+    background: linear-gradient(135deg, #ff4b2b, #ff416c);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 8px;
+    width: 100%;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 10px rgba(255, 75, 43, 0.3);
+}
+
+.cb-track-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 15px rgba(255, 75, 43, 0.5);
+}
+
+.cb-track-btn.tracking {
+    background: #444;
+    cursor: default;
+}
+
+/* Scrollbar styling for the grid */
+.cb-grid::-webkit-scrollbar {
+    width: 8px;
+}
+
+.cb-grid::-webkit-scrollbar-track {
+    background: #121212;
+}
+
+.cb-grid::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 4px;
+}
+
+.cb-grid::-webkit-scrollbar-thumb:hover {
+    background: #ff4b2b;
+}
+
+/* Enhanced Track Button */
+.cb-track-btn.tracking {
+    background: #222;
+    border: 1px solid #ff4b2b;
+    color: #ff4b2b;
+}
+
+.cb-track-btn.tracking:hover {
+    background: #ff4b2b;
+    color: white;
+}
+
+/* Fullscreen Overlay */
+#cb-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
+}
+
+#cb-overlay.active {
+    display: flex;
+}
+
+.cb-fullscreen-container {
+    width: 90vw;
+    height: 90vh;
+    position: relative;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 1);
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.cb-fullscreen-container iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+.cb-overlay-close {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: #ff4b2b;
+    color: white;
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+}
+
+/* Make grid items clickable */
+.cb-stream-card {
+    cursor: zoom-in;
+}
+
+.cb-close-btn,
+.cb-track-btn {
+    cursor: pointer;
+}
