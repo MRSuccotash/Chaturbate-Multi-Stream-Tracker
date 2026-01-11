@@ -13,9 +13,6 @@ The extension automatically forces **240p** for grid views to save your data and
 ### 🖱️ Drag & Drop Reordering
 Customize your layout by moving the most interesting streams to the top. Just click and drag cards to rearrange. Your layout is saved automatically! 🏗️
 
-### 🕵️‍♂️ Auto-Hide & Return
-- **Auto-Hide**: If a model goes offline, the card disappears to save space.
-- **Auto-Play**: As soon as they are back online, the stream **reappears and auto-plays**! 👻➡️🔥
 
 ### 📚 Master History & "Open All Online"
 Your extension keeps a permanent history of all models you've tracked. Use the **"Open All Online"** button to instantly add everyone from your history who is currently live! 🔄

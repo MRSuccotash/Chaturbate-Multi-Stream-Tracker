@@ -80,10 +80,6 @@
             });
             updateCount();
         }
-
-        // Start offline checking - much more frequent for better UX
-        setInterval(checkOfflineStatus, 5000);
-        checkOfflineStatus();
     }
 
     async function loadState() {
@@ -128,50 +124,6 @@
         });
     }
 
-    function checkOfflineStatus() {
-        const onlineDiscoverable = new Set();
-        // Chaturbate uses different selectors depending on the page and layout
-        const cards = document.querySelectorAll('li.roomCard, div.room-card, .room_list_room, .female, .male, .couple, .trans');
-
-        cards.forEach(card => {
-            const link = card.querySelector('a[href^="/"]');
-            if (link) {
-                const name = link.getAttribute('href').replace(/\//g, '').split('?')[0];
-                if (name && name !== 'in' && name !== 'jobs') {
-                    onlineDiscoverable.add(name);
-                }
-            }
-        });
-
-        let onlineCount = 0;
-        gridContainer.querySelectorAll('.cb-stream-card').forEach(card => {
-            const model = card.dataset.model;
-
-            // If we're on a page with room cards (like front page, tags, etc.)
-            if (cards.length > 3) { // Lower threshold
-                if (!onlineDiscoverable.has(model)) {
-                    card.classList.add('is-offline');
-                    card.style.setProperty('display', 'none', 'important');
-                } else {
-                    if (card.classList.contains('is-offline')) {
-                        card.classList.remove('is-offline');
-                        card.style.removeProperty('display');
-                        // Reload iframe to ensure the stream starts playing immediately
-                        const iframe = card.querySelector('iframe');
-                        if (iframe) iframe.src = iframe.src;
-                    }
-                    onlineCount++;
-                }
-            } else {
-                // If we can't see room lists (e.g. inside a room), we keep them visible
-                card.classList.remove('is-offline');
-                card.style.removeProperty('display');
-                onlineCount++;
-            }
-        });
-        updateCount(onlineCount);
-    }
-
     function toggleCollapse() {
         isCollapsed = !isCollapsed;
         headerContainer.classList.toggle('collapsed', isCollapsed);
@@ -214,7 +166,6 @@
     }
 
     function openFullscreen(modelName) {
-        // Pause all streams in the grid to save traffic
         pauseGridStreams();
 
         const container = document.createElement('div');
@@ -232,7 +183,6 @@
 
         container.appendChild(iframe);
 
-        // Clear previous content but keep close button
         const closeBtn = overlay.querySelector('.cb-overlay-close');
         overlay.innerHTML = '';
         overlay.appendChild(closeBtn);
@@ -246,8 +196,6 @@
         overlay.classList.remove('active');
         overlay.querySelector('.cb-fullscreen-container')?.remove();
         document.body.style.overflow = '';
-
-        // Resume all streams in the grid
         resumeGridStreams();
     }
 
@@ -285,7 +233,6 @@
                 }
             } catch (e) { }
         };
-        // Retry a few times as Chaturbate player loads components lazily
         setTimeout(trySet, 1500);
         setTimeout(trySet, 4000);
     }
@@ -350,7 +297,6 @@
         card.dataset.model = modelName;
         card.draggable = true;
 
-        // Drag and Drop Events
         card.ondragstart = (e) => {
             card.classList.add('dragging');
             draggedModel = modelName;
@@ -391,9 +337,6 @@
         const title = document.createElement('span');
         title.className = 'cb-card-title';
         title.innerText = modelName;
-
-        const cardControls = document.createElement('div');
-        cardControls.className = 'cb-card-controls';
 
         const closeBtn = document.createElement('button');
         closeBtn.className = 'cb-close-btn';
@@ -442,7 +385,6 @@
         }
         updateCount();
 
-        // Update just this specific button
         const originalBtn = document.querySelector(`.cb-track-btn[data-model="${modelName}"]`);
         if (originalBtn) {
             updateButtonState(originalBtn, modelName);
@@ -466,22 +408,18 @@
         trackedModels.forEach(model => {
             renderStreamCard(model);
         });
-        checkOfflineStatus(); // Re-apply offline hiding safely after refresh
     }
 
-    function updateCount(onlineOverride) {
+    function updateCount() {
         const countEl = document.getElementById('cb-count');
         if (countEl) {
             const total = trackedModels.length;
-            const online = onlineOverride !== undefined ? onlineOverride : total;
-            countEl.innerText = total > 0 ? `(${online}/${total})` : `(0)`;
+            countEl.innerText = `(${total})`;
         }
     }
 
     function injectButtons() {
         const roomCards = document.querySelectorAll('li.roomCard:not(.cb-processed)');
-        if (roomCards.length === 0) return;
-
         roomCards.forEach(card => {
             card.classList.add('cb-processed');
             const link = card.querySelector('a[href^="/"]');
@@ -514,7 +452,6 @@
                     updateButtonState(btn, modelName);
                 };
             }
-
             updateButtonState(btn, modelName);
         });
     }
@@ -522,25 +459,19 @@
     function updateButtonState(btn, modelName) {
         const isTracking = trackedModels.includes(modelName);
         const nextText = isTracking ? 'Untrack' : 'Track';
-
-        if (btn.innerText !== nextText) {
-            btn.innerText = nextText;
-        }
-
-        if (isTracking) {
-            btn.classList.add('tracking');
-        } else {
-            btn.classList.remove('tracking');
-        }
+        if (btn.innerText !== nextText) btn.innerText = nextText;
+        if (isTracking) btn.classList.add('tracking');
+        else btn.classList.remove('tracking');
     }
 
+    // Initialization
     initHeader().then(() => {
         injectButtons();
     });
 
+    // Observer to handle infinite scroll
     let observerDebounce = null;
     const observer = new MutationObserver((mutations) => {
-        // Skip mutations inside our own header or if it's just our buttons changing
         const isSelf = mutations.every(m => {
             const target = m.target;
             if (!target) return true;
@@ -554,9 +485,6 @@
         observerDebounce = setTimeout(injectButtons, 300);
     });
 
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
+    observer.observe(document.body, { childList: true, subtree: true });
 
 })();
