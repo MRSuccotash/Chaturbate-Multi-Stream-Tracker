@@ -9,6 +9,8 @@
     let isCollapsed = false;
     let isMutedAll = false;
     let draggedModel = null;
+    let modelOnlineStatus = {}; // Статус онлайн для каждой модели
+    let visibilityObserver = null; // IntersectionObserver для ленивой загрузки
 
     async function initHeader() {
         if (document.getElementById('cb-multi-stream-header')) return;
@@ -43,6 +45,13 @@
         openOnlineBtn.title = 'Open all models from history who are currently online';
         openOnlineBtn.onclick = openAllOnline;
 
+        const sortOnlineBtn = document.createElement('button');
+        sortOnlineBtn.id = 'cb-sort-online';
+        sortOnlineBtn.className = 'cb-control-btn';
+        sortOnlineBtn.innerHTML = 'Online to Top';
+        sortOnlineBtn.title = 'Move online models to top of the list';
+        sortOnlineBtn.onclick = sortOnlineToTop;
+
         const collapseBtn = document.createElement('button');
         collapseBtn.id = 'cb-collapse-btn';
         collapseBtn.className = 'cb-control-btn';
@@ -52,6 +61,7 @@
 
         controls.appendChild(muteBtn);
         controls.appendChild(openOnlineBtn);
+        controls.appendChild(sortOnlineBtn);
         controls.appendChild(collapseBtn);
 
         headerTop.appendChild(title);
@@ -293,8 +303,9 @@
         if (gridContainer.querySelector(`.cb-stream-card[data-model="${modelName}"]`)) return;
 
         const card = document.createElement('div');
-        card.className = 'cb-stream-card loading';
+        card.className = 'cb-stream-card';
         card.dataset.model = modelName;
+        card.dataset.loaded = 'false'; // Флаг: загружен ли iframe
         card.draggable = true;
 
         card.ondragstart = (e) => {
@@ -350,6 +361,27 @@
         cardHeader.appendChild(title);
         cardHeader.appendChild(closeBtn);
 
+        // Плейсхолдер вместо iframe
+        const placeholder = document.createElement('div');
+        placeholder.className = 'cb-placeholder';
+        placeholder.innerHTML = `<span>Loading...</span>`;
+
+        card.appendChild(cardHeader);
+        card.appendChild(placeholder);
+        gridContainer.appendChild(card);
+
+        // Добавляем карточку в observer для ленивой загрузки
+        if (visibilityObserver) {
+            visibilityObserver.observe(card);
+        }
+    }
+
+    function loadIframe(card) {
+        if (card.dataset.loaded === 'true') return;
+        
+        const modelName = card.dataset.model;
+        const placeholder = card.querySelector('.cb-placeholder');
+        
         const iframe = document.createElement('iframe');
         iframe.src = `https://chaturbate.com/embed/${modelName}/?room=${modelName}&bgcolor=black`;
         iframe.allowFullscreen = true;
@@ -358,7 +390,7 @@
         iframe.onload = () => {
             card.classList.remove('loading');
             injectIframeStyles(iframe);
-            setIframeQuality(iframe, '240p'); // Set low quality for grid
+            setIframeQuality(iframe, '240p');
             if (isMutedAll) {
                 try {
                     const doc = iframe.contentDocument || iframe.contentWindow.document;
@@ -366,11 +398,77 @@
                     if (video) video.muted = true;
                 } catch (e) { }
             }
+            
+            // Проверяем офлайн статус через 2 секунды (без перемещения)
+            setTimeout(() => checkOfflineStatus(card, iframe), 2000);
         };
 
-        card.appendChild(cardHeader);
-        card.appendChild(iframe);
-        gridContainer.appendChild(card);
+        if (placeholder) {
+            placeholder.replaceWith(iframe);
+        } else {
+            card.appendChild(iframe);
+        }
+        
+        card.dataset.loaded = 'true';
+    }
+
+    function checkOfflineStatus(card, iframe) {
+        // Если статус уже проверен — не проверяем повторно
+        const modelName = card.dataset.model;
+        if (card.dataset.statusChecked === 'true') return;
+        
+        try {
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            const bodyText = doc?.body?.innerText || '';
+            
+            if (bodyText.includes('Room is currently offline')) {
+                card.classList.add('offline');
+                card.classList.remove('online');
+                modelOnlineStatus[modelName] = false;
+            } else {
+                card.classList.add('online');
+                card.classList.remove('offline');
+                modelOnlineStatus[modelName] = true;
+            }
+            
+            card.dataset.statusChecked = 'true';
+            updateCount();
+        } catch (e) {
+            // Cross-origin — не можем проверить
+        }
+    }
+
+    function unloadIframe(card) {
+        if (card.dataset.loaded !== 'true') return;
+        
+        const iframe = card.querySelector('iframe');
+        if (iframe) {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'cb-placeholder';
+            placeholder.innerHTML = `<span>Paused</span>`;
+            iframe.replaceWith(placeholder);
+        }
+        
+        card.dataset.loaded = 'false';
+    }
+
+    function initVisibilityObserver() {
+        visibilityObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                const card = entry.target;
+                if (entry.isIntersecting) {
+                    // Карточка видна — загружаем iframe
+                    loadIframe(card);
+                } else {
+                    // Карточка не видна — выгружаем iframe для экономии памяти
+                    unloadIframe(card);
+                }
+            });
+        }, {
+            root: null, // viewport
+            rootMargin: '200px', // Загружаем чуть заранее
+            threshold: 0
+        });
     }
 
     function removeStream(modelName) {
@@ -396,25 +494,84 @@
         const newIndex = trackedModels.indexOf(targetModel);
 
         if (oldIndex !== -1 && newIndex !== -1) {
+            // Обновляем порядок в массиве
             trackedModels.splice(oldIndex, 1);
             trackedModels.splice(newIndex, 0, movingModel);
             saveState();
-            refreshGrid();
+
+            // Переставляем DOM-элементы без пересоздания iframe-ов
+            const movingCard = gridContainer.querySelector(`.cb-stream-card[data-model="${movingModel}"]`);
+            const targetCard = gridContainer.querySelector(`.cb-stream-card[data-model="${targetModel}"]`);
+
+            if (movingCard && targetCard) {
+                // Вставляем перетаскиваемую карточку перед целевой или после неё
+                if (oldIndex < newIndex) {
+                    // Перемещаем вперёд — вставляем после целевой
+                    targetCard.after(movingCard);
+                } else {
+                    // Перемещаем назад — вставляем перед целевой
+                    targetCard.before(movingCard);
+                }
+            }
         }
     }
 
     function refreshGrid() {
-        gridContainer.innerHTML = '';
+        // Переупорядочиваем существующие карточки без пересоздания
         trackedModels.forEach(model => {
-            renderStreamCard(model);
+            const card = gridContainer.querySelector(`.cb-stream-card[data-model="${model}"]`);
+            if (card) {
+                // appendChild перемещает существующий элемент в конец
+                gridContainer.appendChild(card);
+            } else {
+                // Карточка не существует — создаём новую
+                renderStreamCard(model);
+            }
         });
     }
+
+    function markOnlineStatus(modelName, card) {
+        // Проверяем наличие модели в списке roomCard на странице — значит онлайн
+        const onlineOnPage = document.querySelector(`li.roomCard a[href="/${modelName}/"]`);
+        const isOnline = !!onlineOnPage;
+        
+        modelOnlineStatus[modelName] = isOnline;
+        
+        if (isOnline) {
+            card.classList.add('online');
+            card.classList.remove('offline');
+        } else {
+            card.classList.add('offline');
+            card.classList.remove('online');
+        }
+    }
+
+    function sortOnlineToTop() {
+        // Собираем онлайн и офлайн модели
+        const onlineModels = trackedModels.filter(m => modelOnlineStatus[m] === true);
+        const offlineModels = trackedModels.filter(m => modelOnlineStatus[m] !== true);
+        
+        // Сначала онлайн, потом офлайн
+        const sorted = [...onlineModels, ...offlineModels];
+        
+        // Переупорядочиваем DOM один раз
+        sorted.forEach(model => {
+            const card = gridContainer.querySelector(`.cb-stream-card[data-model="${model}"]`);
+            if (card) {
+                gridContainer.appendChild(card);
+            }
+        });
+        
+        updateCount();
+    }
+
 
     function updateCount() {
         const countEl = document.getElementById('cb-count');
         if (countEl) {
             const total = trackedModels.length;
-            countEl.innerText = `(${total})`;
+            const onlineCount = trackedModels.filter(m => modelOnlineStatus[m]).length;
+            countEl.innerText = `(${onlineCount} online / ${total} total)`;
         }
     }
 
@@ -465,6 +622,7 @@
     }
 
     // Initialization
+    initVisibilityObserver(); // Инициализируем observer для ленивой загрузки
     initHeader().then(() => {
         injectButtons();
     });

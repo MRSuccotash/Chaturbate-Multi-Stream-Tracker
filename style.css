@@ -118,6 +118,22 @@
     }
 }
 
+/* Placeholder для ленивой загрузки */
+.cb-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1a1a1a, #0a0a0a);
+    color: #666;
+    font-size: 14px;
+}
+
+.cb-placeholder span {
+    animation: cb-pulse 1.5s infinite;
+}
+
 /* Drag and Drop Styles */
 .cb-stream-card.dragging {
     opacity: 0.4;
@@ -298,4 +314,57 @@
 .cb-close-btn,
 .cb-track-btn {
     cursor: pointer;
+}
+
+/* Online/Offline Status Indicators */
+.cb-stream-card.online {
+    border-color: #28a745;
+    box-shadow: 0 0 15px rgba(40, 167, 69, 0.4);
+}
+
+.cb-stream-card.online .cb-card-header {
+    background: linear-gradient(180deg, rgba(40, 167, 69, 0.6), rgba(0, 0, 0, 0.6));
+}
+
+.cb-stream-card.online .cb-card-title::before {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: #28a745;
+    border-radius: 50%;
+    margin-right: 8px;
+    animation: cb-online-pulse 1.5s infinite;
+}
+
+@keyframes cb-online-pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+    }
+    50% {
+        box-shadow: 0 0 0 6px rgba(40, 167, 69, 0);
+    }
+}
+
+.cb-stream-card.offline {
+    border-color: #666;
+    opacity: 0.7;
+}
+
+.cb-stream-card.offline .cb-card-header {
+    background: linear-gradient(180deg, rgba(100, 100, 100, 0.6), rgba(0, 0, 0, 0.6));
+}
+
+.cb-stream-card.offline .cb-card-title::before {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: #666;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.cb-stream-card.offline:hover {
+    opacity: 1;
 }
